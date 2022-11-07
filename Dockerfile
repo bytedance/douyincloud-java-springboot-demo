@@ -1,4 +1,4 @@
-FROM maven:3.6.0-jdk-8-slim as build
+FROM public-cn-beijing.cr.volces.com/public/base:maven-3.6.0-jdk-8-slim as build
 
 # 指定构建过程中的工作目录
 WORKDIR /opt/application
