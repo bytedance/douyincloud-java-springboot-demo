@@ -1,44 +1,48 @@
 package com.bytedance.douyinclouddemo.controller;
 
 import com.bytedance.douyinclouddemo.model.JsonResponse;
-import com.bytedance.douyinclouddemo.model.SetNameRequest;
-import com.bytedance.douyinclouddemo.service.HelloService;
-import com.bytedance.douyinclouddemo.service.impl.HelloServiceFactory;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import com.bytedance.douyinclouddemo.model.TextAntidirt;
+import com.bytedance.douyinclouddemo.model.TextAntidirtRequest;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 @RestController
 public class HelloController {
 
-    @Autowired
-    private HelloServiceFactory factory;
-
-    @Value("${cloud.env}")
-    private String envMark;
-
-    @GetMapping("/api/hello")
-    public JsonResponse hello(@RequestParam(value = "target", defaultValue = "mongodb") String target) {
+    @GetMapping("/api/get_open_id")
+    public JsonResponse getOpenID(@RequestHeader("X-TT-OPENID") String openID) {
         JsonResponse response = new JsonResponse();
-        try {
-            HelloService helloService = factory.getHelloService(target);
-            response.success("env:" + envMark + " hello " +  helloService.hello(target));
-        }catch (Exception e){
-            response.failure("unknown error");
+        if(openID.isEmpty()){
+            response.failure("openid is empty");
+        }else{
+            response.success(openID);
         }
         return response;
     }
 
-    @PostMapping("/api/set_name")
-    public JsonResponse setName(@RequestBody SetNameRequest setNameRequest) {
+    @PostMapping("/api/text/antidirt")
+    public JsonResponse textAntidirt(@RequestBody TextAntidirtRequest textAntidirtRequest) throws JsonProcessingException {
+
+        TextAntidirt textAntidirt = new TextAntidirt(textAntidirtRequest.getContent());
+
+        ObjectMapper objectMapper = new ObjectMapper();
+
+        String jsonString = objectMapper.writeValueAsString(textAntidirt);
+
+        RestTemplate restTemplate = new RestTemplate();
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+
+        HttpEntity<String> requestEntity = new HttpEntity<>(jsonString, headers);
+
+        String url = "http://developer.toutiao.com/api/v2/tags/text/antidirt";
+        ResponseEntity<String> responseEntity = restTemplate.exchange(url, HttpMethod.POST, requestEntity, String.class);
+        String responseBody = responseEntity.getBody();
         JsonResponse response = new JsonResponse();
-        try {
-            HelloService helloService = factory.getHelloService(setNameRequest.getTarget());
-            helloService.setName(setNameRequest.getTarget(),setNameRequest.getName());
-            response.success("");
-        }catch (Exception e){
-            response.failure("unknown error");
-        }
+        response.success(responseBody);
         return response;
     }
 }
